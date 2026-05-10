@@ -2,7 +2,7 @@
 
 Microservicio RESTful desarrollado en Java con Spring Boot para la gestión de productos de la tienda ficticia **TechStore Chile**.
 
-El proyecto permite administrar productos mediante operaciones CRUD, proteger los endpoints mediante autenticación JWT, conectar la aplicación con una base de datos relacional PostgreSQL y generar un archivo ejecutable `.jar` utilizando Maven.
+El proyecto permite administrar productos mediante operaciones CRUD, proteger los endpoints mediante autenticación JWT, conectar la aplicación con una base de datos relacional PostgreSQL, generar un archivo ejecutable `.jar` utilizando Maven y levantar el entorno completo mediante Docker Compose.
 
 ---
 
@@ -15,7 +15,7 @@ El proyecto permite administrar productos mediante operaciones CRUD, proteger lo
 
 ## Objetivo del proyecto
 
-Desarrollar un microservicio RESTful en Java con Spring Boot que permita gestionar el catálogo de productos de TechStore Chile, aplicando arquitectura en capas, persistencia con JPA/Hibernate, autenticación JWT, control de versiones con Git/GitHub y empaquetado mediante Maven.
+Desarrollar un microservicio RESTful en Java con Spring Boot que permita gestionar el catálogo de productos de TechStore Chile, aplicando arquitectura en capas, persistencia con JPA/Hibernate, autenticación JWT, control de versiones con Git/GitHub, empaquetado mediante Maven y orquestación con Docker Compose.
 
 ---
 
@@ -31,7 +31,8 @@ Desarrollar un microservicio RESTful en Java con Spring Boot que permita gestion
 - PostgreSQL
 - Hibernate / JPA
 - Git y GitHub
-- Docker / Docker Compose
+- Docker
+- Docker Compose
 - Postman
 
 ---
@@ -66,18 +67,20 @@ src/main/java/cl/techstore/api/
 │   └── ProductoService.java
 │
 └── ApiApplication.java
-````
+```
 
-### Descripción de capas
+---
 
-| Capa         | Responsabilidad                                                      |
-| ------------ | -------------------------------------------------------------------- |
-| `controller` | Recibe las peticiones HTTP y expone los endpoints REST.              |
-| `service`    | Contiene la lógica de negocio del sistema.                           |
-| `repository` | Permite acceder a la base de datos mediante Spring Data JPA.         |
-| `model`      | Define las entidades JPA que representan tablas en la base de datos. |
-| `dto`        | Define objetos para recibir y devolver datos en las peticiones.      |
-| `security`   | Contiene la configuración de seguridad, generación y validación JWT. |
+## Descripción de capas
+
+| Capa | Responsabilidad |
+|---|---|
+| `controller` | Recibe las peticiones HTTP y expone los endpoints REST. |
+| `service` | Contiene la lógica de negocio del sistema. |
+| `repository` | Permite acceder a la base de datos mediante Spring Data JPA. |
+| `model` | Define las entidades JPA que representan tablas en la base de datos. |
+| `dto` | Define objetos para recibir y devolver datos en las peticiones. |
+| `security` | Contiene la configuración de seguridad, generación y validación JWT. |
 
 ---
 
@@ -87,28 +90,29 @@ La entidad principal del sistema es `Producto`.
 
 ### Entidad Producto
 
-| Campo         | Tipo Java | Descripción                                       |
-| ------------- | --------- | ------------------------------------------------- |
-| `id`          | Long      | Identificador único del producto.                 |
-| `nombre`      | String    | Nombre del producto.                              |
-| `descripcion` | String    | Descripción breve del producto.                   |
-| `precio`      | Double    | Precio del producto en CLP.                       |
-| `stock`       | Integer   | Cantidad disponible en bodega.                    |
-| `categoria`   | String    | Categoría del producto.                           |
-| `activo`      | Boolean   | Indica si el producto está activo en el catálogo. |
+| Campo | Tipo Java | Descripción |
+|---|---|---|
+| `id` | Long | Identificador único del producto. |
+| `nombre` | String | Nombre del producto. |
+| `descripcion` | String | Descripción breve del producto. |
+| `precio` | Double | Precio del producto en CLP. |
+| `stock` | Integer | Cantidad disponible en bodega. |
+| `categoria` | String | Categoría del producto. |
+| `activo` | Boolean | Indica si el producto está activo en el catálogo. |
 
-La eliminación de productos se realiza mediante **borrado lógico**, por lo tanto el registro no se elimina físicamente de la base de datos. En su lugar, el campo `activo` cambia a `false`.
+La eliminación de productos se realiza mediante **borrado lógico**. Esto significa que el registro no se elimina físicamente de la base de datos. En su lugar, el campo `activo` cambia a `false`.
 
 ---
 
 ## Base de datos
 
-El proyecto está configurado para utilizar PostgreSQL.
+El proyecto utiliza PostgreSQL como base de datos relacional.
 
-La base de datos debe contener exclusivamente la información relacionada con productos. Los usuarios para autenticación no se almacenan en la base de datos, ya que las credenciales de login están definidas en el archivo de configuración del proyecto.
+La base de datos contiene exclusivamente la información relacionada con productos. Los usuarios para autenticación no se almacenan en la base de datos, ya que las credenciales de login están definidas en el archivo de configuración del proyecto.
 
-### Configuración actual en `application.properties`
+### Configuración local en `application.properties`
 
+```properties
 spring.application.name=api
 
 spring.datasource.url=jdbc:postgresql://localhost:5432/techstore
@@ -129,6 +133,7 @@ app.jwt.expiration-ms=3600000
 # Usuario fijo para login
 app.security.username=admin@techstore.cl
 app.security.password=Admin1234
+```
 
 ---
 
@@ -187,23 +192,23 @@ Authorization: Bearer <token>
 
 ---
 
-## Endpoints disponibles
+## Endpoints implementados
 
 ### Autenticación
 
-| Método | Endpoint      | Descripción          | Requiere token |
-| ------ | ------------- | -------------------- | -------------- |
-| POST   | `/auth/login` | Genera un token JWT. | No             |
+| Método | Endpoint | Descripción | Requiere token |
+|---|---|---|---|
+| POST | `/auth/login` | Genera un token JWT. | No |
 
 ### Productos
 
-| Método | Endpoint              | Descripción                          | Código esperado | Requiere token |
-| ------ | --------------------- | ------------------------------------ | --------------- | -------------- |
-| GET    | `/api/productos`      | Lista todos los productos activos.   | 200 OK          | Sí             |
-| GET    | `/api/productos/{id}` | Busca un producto por ID.            | 200 OK          | Sí             |
-| POST   | `/api/productos`      | Crea un nuevo producto.              | 201 Created     | Sí             |
-| PUT    | `/api/productos/{id}` | Modifica un producto existente.      | 200 OK          | Sí             |
-| DELETE | `/api/productos/{id}` | Realiza borrado lógico del producto. | 204 No Content  | Sí             |
+| Método | Endpoint | Descripción | Código esperado | Requiere token |
+|---|---|---|---|---|
+| GET | `/api/productos` | Lista todos los productos activos. | 200 OK | Sí |
+| GET | `/api/productos/{id}` | Busca un producto por ID. | 200 OK | Sí |
+| POST | `/api/productos` | Crea un nuevo producto. | 201 Created | Sí |
+| PUT | `/api/productos/{id}` | Modifica un producto existente. | 200 OK | Sí |
+| DELETE | `/api/productos/{id}` | Realiza borrado lógico del producto. | 204 No Content | Sí |
 
 ---
 
@@ -213,6 +218,7 @@ Authorization: Bearer <token>
 
 ```http
 POST http://localhost:8080/auth/login
+Content-Type: application/json
 ```
 
 Body:
@@ -240,6 +246,12 @@ Header:
 Authorization: Bearer <token>
 ```
 
+Respuesta esperada:
+
+```http
+200 OK
+```
+
 ---
 
 ### 3. Crear producto
@@ -248,7 +260,7 @@ Authorization: Bearer <token>
 POST http://localhost:8080/api/productos
 ```
 
-Header:
+Headers:
 
 ```http
 Authorization: Bearer <token>
@@ -282,7 +294,7 @@ Respuesta esperada:
 PUT http://localhost:8080/api/productos/1
 ```
 
-Header:
+Headers:
 
 ```http
 Authorization: Bearer <token>
@@ -356,7 +368,11 @@ cd TechStore-Chile
 git checkout dev
 ```
 
-### 4. Verificar dependencias y compilar
+---
+
+## Compilación con Maven
+
+Antes de ejecutar el proyecto o construir la imagen Docker, se debe generar el archivo `.jar`.
 
 En Windows:
 
@@ -364,7 +380,7 @@ En Windows:
 mvnw.cmd clean package -DskipTests
 ```
 
-En Git Bash o Linux/Mac:
+En Git Bash, Linux o Mac:
 
 ```bash
 ./mvnw clean package -DskipTests
@@ -376,11 +392,17 @@ Si la compilación es correcta, debe aparecer:
 BUILD SUCCESS
 ```
 
+El archivo `.jar` se genera en:
+
+```text
+target/api-0.0.1-SNAPSHOT.jar
+```
+
 ---
 
-## Ejecución local
+## Ejecución local sin Docker
 
-Para ejecutar el proyecto localmente, primero debe existir una base de datos PostgreSQL disponible con esta configuración:
+Para ejecutar el proyecto localmente sin Docker, primero debe existir una base de datos PostgreSQL disponible con la siguiente configuración:
 
 ```text
 Base de datos: techstore
@@ -389,13 +411,13 @@ Contraseña: admin123
 Puerto: 5432
 ```
 
-Luego ejecutar:
+Luego se puede ejecutar la aplicación con:
 
 ```bash
 java -jar target/api-0.0.1-SNAPSHOT.jar
 ```
 
-La aplicación quedará disponible en:
+La API quedará disponible en:
 
 ```text
 http://localhost:8080
@@ -405,18 +427,154 @@ http://localhost:8080
 
 ## Docker y Docker Compose
 
-El proyecto considera el uso de Docker Compose para levantar el entorno completo, incluyendo el microservicio y la base de datos PostgreSQL.
+El proyecto incluye configuración para levantar el entorno completo mediante Docker Compose, integrando la aplicación Spring Boot y la base de datos PostgreSQL.
 
-Esta parte corresponde a la etapa de integración y pruebas finales del proyecto.
-
-Servicios esperados:
+Se incluyen dos servicios principales:
 
 ```text
-1. PostgreSQL
-2. Microservicio Spring Boot
+postgres       → base de datos PostgreSQL 15
+microservicio  → aplicación Spring Boot
 ```
 
-El archivo `docker-compose.yml` debe permitir levantar ambos servicios y conectar la aplicación con la base de datos PostgreSQL.
+---
+
+### Dockerfile
+
+El archivo `Dockerfile` permite construir la imagen del microservicio a partir del archivo `.jar` generado por Maven.
+
+```dockerfile
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY target/api-0.0.1-SNAPSHOT.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+Descripción del Dockerfile:
+
+| Línea | Función |
+|---|---|
+| `FROM eclipse-temurin:17-jre` | Utiliza una imagen base con Java 17. |
+| `WORKDIR /app` | Define el directorio de trabajo dentro del contenedor. |
+| `COPY target/api-0.0.1-SNAPSHOT.jar app.jar` | Copia el archivo `.jar` generado por Maven al contenedor. |
+| `EXPOSE 8080` | Expone el puerto 8080 para acceder a la API. |
+| `ENTRYPOINT ["java", "-jar", "app.jar"]` | Ejecuta la aplicación Spring Boot dentro del contenedor. |
+
+---
+
+### docker-compose.yml
+
+El archivo `docker-compose.yml` permite levantar PostgreSQL y el microservicio en conjunto.
+
+```yaml
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: techstore_db
+    environment:
+      POSTGRES_DB: techstore
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5432:5432"
+
+  microservicio:
+    build: .
+    container_name: techstore_api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/techstore
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin123
+    depends_on:
+      - postgres
+```
+
+Configuración de PostgreSQL utilizada por Docker Compose:
+
+```text
+Base de datos: techstore
+Usuario: admin
+Contraseña: admin123
+Puerto externo: 5432
+```
+
+Configuración del microservicio:
+
+```text
+Nombre del contenedor: techstore_api
+Puerto externo: 8080
+URL interna de conexión: jdbc:postgresql://postgres:5432/techstore
+```
+
+Dentro de Docker Compose, la aplicación no se conecta a `localhost`, sino al servicio llamado `postgres`. Por eso se utiliza:
+
+```text
+jdbc:postgresql://postgres:5432/techstore
+```
+
+---
+
+## Ejecución con Docker Compose
+
+Primero se debe generar el `.jar`:
+
+En Windows:
+
+```bash
+mvnw.cmd clean package -DskipTests
+```
+
+En Git Bash, Linux o Mac:
+
+```bash
+./mvnw clean package -DskipTests
+```
+
+Luego se levanta el entorno completo con:
+
+```bash
+docker compose up --build
+```
+
+La API quedará disponible en:
+
+```text
+http://localhost:8080
+```
+
+PostgreSQL quedará disponible en:
+
+```text
+localhost:5432
+```
+
+Para detener los contenedores:
+
+```bash
+docker compose down
+```
+
+---
+
+## Verificación funcional
+
+Para comprobar el funcionamiento del proyecto, se deben validar los siguientes puntos:
+
+```text
+[✓] Ejecutar Maven y generar el archivo .jar.
+[✓] Levantar PostgreSQL y el microservicio con Docker Compose.
+[✓] Obtener token JWT con POST /auth/login.
+[✓] Listar productos con GET /api/productos.
+[✓] Crear producto con POST /api/productos.
+[✓] Modificar producto con PUT /api/productos/{id}.
+[✓] Eliminar producto con DELETE /api/productos/{id}.
+[✓] Verificar que la eliminación sea lógica mediante activo = false.
+[✓] Verificar persistencia de datos en PostgreSQL.
+```
 
 ---
 
@@ -432,72 +590,31 @@ feature/... → ramas opcionales para funcionalidades específicas
 
 ### Ramas principales
 
-* `main`: contiene la versión final del proyecto.
-* `dev`: contiene el desarrollo integrado.
-* `feature/...`: ramas para funcionalidades específicas como Docker, JWT o CRUD.
-
-### Commits realizados
-
-Algunos commits relevantes del proyecto:
-
-```text
-Inicializa proyecto Spring Boot para TechStore
-Implementa estructura en capas y CRUD de productos
-Configura conexion a base de datos PostgreSQL
-Implementa autenticacion JWT
-```
-
-El merge hacia `main` debe realizarse solo cuando el proyecto esté finalizado, probado y operativo.
-
----
+- `main`: contiene la versión final estable del proyecto.
+- `dev`: contiene el desarrollo integrado.
+- `feature/...`: ramas para funcionalidades específicas como Docker, JWT o CRUD.
 
 ## Estado actual del proyecto
 
 Actualmente el proyecto cuenta con:
 
-* Proyecto Spring Boot generado con Maven.
-* Arquitectura en capas.
-* Entidad `Producto` mapeada con JPA/Hibernate.
-* Repositorio `ProductoRepository`.
-* Servicio `ProductoService`.
-* Controlador `ProductoController`.
-* CRUD de productos.
-* Borrado lógico mediante campo `activo`.
-* Configuración de PostgreSQL.
-* Login con JWT.
-* Protección de endpoints mediante Spring Security.
-* Compilación exitosa con Maven.
-
----
-
-## Pendientes de integración
-
-* Probar conexión real con PostgreSQL.
-* Levantar PostgreSQL mediante Docker.
-* Crear o validar `Dockerfile`.
-* Crear o validar `docker-compose.yml`.
-* Probar endpoints en Postman.
-* Verificar persistencia de datos en la base de datos.
-* Realizar pruebas finales para la presentación.
-* Hacer merge de `dev` a `main` cuando todo esté operativo.
-
----
-
-## Evidencias sugeridas para la presentación
-
-Para la presentación en video se recomienda mostrar:
-
-1. Repositorio GitHub y ramas `main` / `dev`.
-2. Estructura del proyecto en capas.
-3. Entidad `Producto`.
-4. Repositorio, servicio y controlador.
-5. Configuración de PostgreSQL en `application.properties`.
-6. Login JWT.
-7. Pruebas en Postman.
-8. Generación del `.jar` con Maven.
-9. Ejecución local del proyecto.
-10. Docker Compose levantando el entorno completo.
-11. Evidencia de datos persistidos en PostgreSQL.
+- Proyecto Spring Boot generado con Maven.
+- Arquitectura en capas.
+- Entidad `Producto` mapeada con JPA/Hibernate.
+- Repositorio `ProductoRepository`.
+- Servicio `ProductoService`.
+- Controlador `ProductoController`.
+- DTO para productos.
+- CRUD de productos implementado.
+- Borrado lógico mediante campo `activo`.
+- Configuración de PostgreSQL.
+- Login con JWT.
+- Protección de endpoints mediante Spring Security.
+- Compilación exitosa con Maven.
+- Dockerfile para construir la imagen del microservicio.
+- docker-compose.yml para levantar PostgreSQL y el microservicio.
+- Pruebas de endpoints consideradas mediante Postman.
+- Persistencia de datos mediante PostgreSQL.
 
 ---
 
