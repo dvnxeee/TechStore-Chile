@@ -36,12 +36,12 @@ public class ProductoService {
         producto.setPrecio(dto.getPrecio());
         producto.setStock(dto.getStock());
         producto.setCategoria(dto.getCategoria());
-        producto.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        producto.setActivo(dto.getActivo() == null || dto.getActivo());
 
         Producto productoCreado = productoRepository.save(producto);
 
         auditProducer.enviarAuditoria(
-                new AuditMessage("CREAR", productoCreado.getId(), email));
+                new AuditMessage("CREAR", productoCreado.getId(), productoCreado.getNombre(), email));
 
         return productoCreado;
     }
@@ -62,7 +62,7 @@ public class ProductoService {
         Producto productoModificado = productoRepository.save(producto);
 
         auditProducer.enviarAuditoria(
-                new AuditMessage("MODIFICAR", productoModificado.getId(), email));
+                new AuditMessage("MODIFICAR", productoModificado.getId(), productoModificado.getNombre(), email));
 
         return productoModificado;
     }
@@ -75,6 +75,6 @@ public class ProductoService {
         productoRepository.save(producto);
 
         auditProducer.enviarAuditoria(
-                new AuditMessage("ELIMINAR", id, email));
+                new AuditMessage("ELIMINAR", id, producto.getNombre(), email));
     }
 }

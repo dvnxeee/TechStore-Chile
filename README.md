@@ -338,6 +338,18 @@ En comparación con un entorno local con Docker Compose, ECS Fargate permite def
 
 ---
 
+## Escalabilidad y monitoreo en ECS Fargate
+
+El servicio `techstore-api-service` se ejecuta sobre Amazon ECS Fargate, lo que permite administrar la ejecución del contenedor sin mantener servidores EC2 manualmente.
+
+La Task Definition fue configurada con los límites solicitados para el laboratorio:
+
+```text
+CPU: 0.25 vCPU
+Memoria: 0.5 GB RAM
+
+---
+
 ## Exposición mediante API Gateway y ALB
 
 La API se expone mediante Amazon API Gateway, que actúa como punto de entrada público.
