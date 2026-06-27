@@ -6,6 +6,7 @@ import cl.techstore.api.service.ProductoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,23 +32,26 @@ public class ProductoController {
     }
 
     @PostMapping
-    public ResponseEntity<Producto> crear(@Valid @RequestBody ProductoDTO dto) {
-        Producto productoCreado = productoService.crear(dto);
+    public ResponseEntity<Producto> crear(@Valid @RequestBody ProductoDTO dto,
+                                          Authentication authentication) {
+        Producto productoCreado = productoService.crear(dto, authentication.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(productoCreado);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Producto> modificar(
             @PathVariable Long id,
-            @Valid @RequestBody ProductoDTO dto) {
+            @Valid @RequestBody ProductoDTO dto,
+            Authentication authentication) {
 
-        Producto productoModificado = productoService.modificar(id, dto);
+        Producto productoModificado = productoService.modificar(id, dto, authentication.getName());
         return ResponseEntity.ok(productoModificado);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        productoService.eliminar(id);
+    public ResponseEntity<Void> eliminar(@PathVariable Long id,
+                                         Authentication authentication) {
+        productoService.eliminar(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 }
