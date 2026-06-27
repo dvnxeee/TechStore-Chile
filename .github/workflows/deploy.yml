@@ -1,0 +1,91 @@
+name: Deploy TechStore API to AWS ECS Fargate
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: techstore-api
+  ECS_CLUSTER: techstore-cluster
+  ECS_SERVICE: techstore-api-service
+  IMAGE_TAG: latest
+
+jobs:
+  build-and-deploy:
+    name: Build, Push and Deploy
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: techstore
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U admin -d techstore"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Dar permisos al Maven Wrapper
+        run: chmod +x mvnw
+
+      - name: Ejecutar pruebas con Maven
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/techstore
+          SPRING_DATASOURCE_USERNAME: admin
+          SPRING_DATASOURCE_PASSWORD: admin123
+          APP_SQS_AUDIT_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/034485424217/techstore-audit-queue
+        run: ./mvnw clean test
+
+      - name: Empaquetar aplicación
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/techstore
+          SPRING_DATASOURCE_USERNAME: admin
+          SPRING_DATASOURCE_PASSWORD: admin123
+          APP_SQS_AUDIT_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/034485424217/techstore-audit-queue
+        run: ./mvnw package -DskipTests
+
+      - name: Configurar credenciales de AWS Academy
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Iniciar sesión en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Construir, etiquetar y subir imagen Docker a ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Actualizar servicio ECS Fargate
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment

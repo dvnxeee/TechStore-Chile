@@ -1,5 +1,6 @@
 package cl.techstore.api.service;
 
+import cl.techstore.api.dto.AuditMessage;
 import cl.techstore.api.dto.ProductoDTO;
 import cl.techstore.api.model.Producto;
 import cl.techstore.api.repository.ProductoRepository;
@@ -11,9 +12,11 @@ import java.util.List;
 public class ProductoService {
 
     private final ProductoRepository productoRepository;
+    private final AuditProducer auditProducer;
 
-    public ProductoService(ProductoRepository productoRepository) {
+    public ProductoService(ProductoRepository productoRepository, AuditProducer auditProducer) {
         this.productoRepository = productoRepository;
+        this.auditProducer = auditProducer;
     }
 
     public List<Producto> listarTodos() {
@@ -25,7 +28,7 @@ public class ProductoService {
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + id));
     }
 
-    public Producto crear(ProductoDTO dto) {
+    public Producto crear(ProductoDTO dto, String email) {
         Producto producto = new Producto();
 
         producto.setNombre(dto.getNombre());
@@ -35,10 +38,15 @@ public class ProductoService {
         producto.setCategoria(dto.getCategoria());
         producto.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
 
-        return productoRepository.save(producto);
+        Producto productoCreado = productoRepository.save(producto);
+
+        auditProducer.enviarAuditoria(
+                new AuditMessage("CREAR", productoCreado.getId(), email));
+
+        return productoCreado;
     }
 
-    public Producto modificar(Long id, ProductoDTO dto) {
+    public Producto modificar(Long id, ProductoDTO dto, String email) {
         Producto producto = buscarPorId(id);
 
         producto.setNombre(dto.getNombre());
@@ -51,14 +59,22 @@ public class ProductoService {
             producto.setActivo(dto.getActivo());
         }
 
-        return productoRepository.save(producto);
+        Producto productoModificado = productoRepository.save(producto);
+
+        auditProducer.enviarAuditoria(
+                new AuditMessage("MODIFICAR", productoModificado.getId(), email));
+
+        return productoModificado;
     }
 
-    public void eliminar(Long id) {
+    public void eliminar(Long id, String email) {
         Producto producto = buscarPorId(id);
 
         producto.setActivo(false);
 
         productoRepository.save(producto);
+
+        auditProducer.enviarAuditoria(
+                new AuditMessage("ELIMINAR", id, email));
     }
 }
