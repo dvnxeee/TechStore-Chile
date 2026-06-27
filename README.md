@@ -12,8 +12,8 @@ Además, se incorporó automatización CI/CD con GitHub Actions para compilar el
 
 ## Integrantes
 
-* Integrante 1: Renato Valenzuela
-* Integrante 2: Danae Miranda
+* Renato Valenzuela
+* Danae Miranda
 
 ---
 
@@ -159,7 +159,7 @@ Authorization: Bearer <token>
 
 ```text
 Usuario: admin@techstore.cl
-Contraseña: ********
+Contraseña: según configuración del ambiente
 ```
 
 > Por seguridad, las credenciales reales no deben quedar expuestas en el repositorio.
@@ -187,6 +187,8 @@ Contraseña: ********
 Las operaciones `POST`, `PUT` y `DELETE` generan un evento de auditoría que es enviado a Amazon SQS.
 
 ---
+
+# Evaluación Parcial N°3: Modernización Cloud en AWS Academy
 
 ## Arquitectura Cloud implementada en AWS
 
@@ -296,7 +298,7 @@ Cada vez que se realiza una operación de escritura sobre productos, el microser
   "productoId": 1,
   "nombre": "Nombre del producto",
   "usuario": "usuario@techstore.cl",
-  "fecha": "2026-06-27T00:00:00"
+  "fecha": "2026-06-27T00:00:00Z"
 }
 ```
 
@@ -347,6 +349,19 @@ La Task Definition fue configurada con los límites solicitados para el laborato
 ```text
 CPU: 0.25 vCPU
 Memoria: 0.5 GB RAM
+```
+
+ECS Fargate permite mantener tareas activas del microservicio y reemplazarlas automáticamente si alguna falla. Esto entrega mayor disponibilidad que una ejecución local con Docker Compose, donde si el contenedor se detiene se requiere intervención manual o una configuración adicional de reinicio.
+
+Además, el servicio puede integrarse con políticas de ECS Service Auto Scaling para aumentar o disminuir la cantidad de tareas según métricas como uso de CPU o memoria. De esta forma, el sistema puede escalar réplicas en caliente según la carga de trabajo.
+
+En comparación con un entorno local, ECS Fargate entrega:
+
+* Administración automática de tareas.
+* Reinicio o reemplazo de tareas fallidas.
+* Definición explícita de CPU y memoria.
+* Escalabilidad horizontal mediante nuevas réplicas.
+* Integración con métricas y logs de AWS.
 
 ---
 
@@ -430,46 +445,11 @@ Settings → Secrets and variables → Actions → New repository secret
 
 ---
 
-## Docker y Docker Compose
-
-El proyecto también conserva soporte para ejecución local mediante Docker Compose, útil para pruebas de desarrollo.
-
-Servicios principales:
-
-```text
-postgres       → base de datos PostgreSQL 15
-microservicio  → aplicación Spring Boot
-```
-
----
-
 ## Dockerfile
 
-El archivo `Dockerfile` permite construir la imagen del microservicio para su posterior despliegue.
+El archivo `Dockerfile` permite construir la imagen del microservicio para su despliegue en Amazon ECR y ejecución en Amazon ECS Fargate.
 
-Versión actual utilizada por el proyecto:
-
-```dockerfile
-FROM eclipse-temurin:17-jre
-WORKDIR /app
-COPY target/api-0.0.1-SNAPSHOT.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
-```
-
-Descripción:
-
-| Línea                                        | Función                                                   |
-| -------------------------------------------- | --------------------------------------------------------- |
-| `FROM eclipse-temurin:17-jre`                | Utiliza una imagen base con Java 17.                      |
-| `WORKDIR /app`                               | Define el directorio de trabajo dentro del contenedor.    |
-| `COPY target/api-0.0.1-SNAPSHOT.jar app.jar` | Copia el archivo `.jar` generado por Maven al contenedor. |
-| `EXPOSE 8080`                                | Expone el puerto interno 8080.                            |
-| `ENTRYPOINT ["java", "-jar", "app.jar"]`     | Ejecuta la aplicación Spring Boot dentro del contenedor.  |
-
-### Dockerfile recomendado para optimización
-
-Para una versión más optimizada, se puede utilizar un Dockerfile multi-stage que compile el `.jar` y luego ejecute la aplicación con una imagen liviana:
+Para cumplir con la optimización solicitada, se utiliza una construcción multi-stage. En la primera etapa se compila la aplicación con Maven y en la segunda etapa se ejecuta el `.jar` utilizando una imagen liviana de Java 17.
 
 ```dockerfile
 FROM maven:3.9.9-eclipse-temurin-17 AS build
@@ -494,6 +474,35 @@ EXPOSE 8080
 USER appuser
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+Descripción:
+
+| Línea                                                        | Función                                                  |
+| ------------------------------------------------------------ | -------------------------------------------------------- |
+| `FROM maven:3.9.9-eclipse-temurin-17 AS build`               | Usa Maven y Java 17 para compilar la aplicación.         |
+| `WORKDIR /app`                                               | Define el directorio de trabajo dentro del contenedor.   |
+| `COPY pom.xml .`                                             | Copia el archivo de dependencias del proyecto.           |
+| `COPY src ./src`                                             | Copia el código fuente.                                  |
+| `RUN mvn clean package -DskipTests`                          | Genera el archivo `.jar`.                                |
+| `FROM eclipse-temurin:17-jre-alpine`                         | Usa una imagen liviana para ejecutar la aplicación.      |
+| `RUN addgroup -S appgroup && adduser -S appuser -G appgroup` | Crea un usuario no-root para mayor seguridad.            |
+| `COPY --from=build /app/target/*.jar app.jar`                | Copia el `.jar` generado desde la etapa de construcción. |
+| `EXPOSE 8080`                                                | Documenta el puerto interno utilizado por Spring Boot.   |
+| `USER appuser`                                               | Ejecuta la aplicación con un usuario no-root.            |
+| `ENTRYPOINT ["java", "-jar", "app.jar"]`                     | Inicia el microservicio.                                 |
+
+---
+
+## Docker y Docker Compose
+
+El proyecto también conserva soporte para ejecución local mediante Docker Compose, útil para pruebas de desarrollo.
+
+Servicios principales:
+
+```text
+postgres       → base de datos PostgreSQL 15
+microservicio  → aplicación Spring Boot
 ```
 
 ---
@@ -633,7 +642,7 @@ Body:
 ```json
 {
   "username": "admin@techstore.cl",
-  "password": "********"
+  "password": "según configuración del ambiente"
 }
 ```
 
@@ -827,7 +836,7 @@ Actualmente el proyecto cuenta con:
 [✓] Configuración de PostgreSQL.
 [✓] Login con JWT.
 [✓] Protección de endpoints mediante Spring Security.
-[✓] Dockerfile para construir la imagen del microservicio.
+[✓] Dockerfile multi-stage optimizado.
 [✓] docker-compose.yml para ejecución local.
 [✓] Despliegue cloud en AWS Academy.
 [✓] Repositorio privado en Amazon ECR.
@@ -854,6 +863,7 @@ Actualmente el proyecto cuenta con:
 * Los endpoints de productos están protegidos mediante JWT.
 * El microservicio recibe tráfico mediante API Gateway y ALB.
 * El registro de auditoría se realiza de forma asíncrona para no acoplar la operación principal del sistema.
+* La imagen Docker ejecuta la aplicación con usuario no-root.
 
 ---
 
